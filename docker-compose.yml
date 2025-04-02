@@ -1,0 +1,37 @@
+services:
+  ollama:
+    volumes:
+      - ollama:/root/.ollama
+    tty: true
+    restart: unless-stopped
+    image: ollama/ollama:${OLLAMA_DOCKER_TAG-latest}
+    deploy:
+      mode: replicated
+      replicas: 1
+
+  chat:
+    image: ghcr.io/open-webui/open-webui:${WEBUI_DOCKER_TAG-main}
+    volumes:
+      - open-webui:/app/backend/data
+    environment:
+      - 'OLLAMA_BASE_URL=http://ollama:11434'
+      - 'WEBUI_SECRET_KEY='
+    networks:
+      - default
+      - proxy
+    deploy:
+      mode: replicated
+      replicas: 1
+      labels:
+        - traefik.enable=true
+        #- traefik.http.routers.chat-ai.rule=Host(`${WEBSERVER_FQDN}`)
+        - traefik.http.routers.chat-ai.tls.certresolver=myresolver
+        - traefik.http.services.chat-ai.loadbalancer.server.port=8080
+
+volumes:
+  ollama: {}
+  open-webui: {}
+
+networks:
+  proxy:
+    external: true
